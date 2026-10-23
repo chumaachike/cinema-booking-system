@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"sync"
 )
 
 type MemoryStore struct {
 	bookings map[string]Booking
+	sync.RWMutex
 }
 
 func NewMemoryStore() *MemoryStore {
@@ -16,6 +18,8 @@ func NewMemoryStore() *MemoryStore {
 	}
 }
 func (s *MemoryStore) Book(b Booking) error {
+	s.Lock()
+	defer s.Unlock()
 	if _, ok := s.bookings[b.SeatID]; ok {
 		return fmt.Errorf("booking has already been created earlier")
 	}
@@ -24,6 +28,7 @@ func (s *MemoryStore) Book(b Booking) error {
 }
 
 func (s *MemoryStore) ListBookings(MovieID string) []Booking {
+	s.RLock()
+	defer s.RUnlock()
 	return slices.Collect(maps.Values(s.bookings))
-
 }
