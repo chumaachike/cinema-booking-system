@@ -8,6 +8,10 @@ func NewService(store BookingStore) *Service {
 	return &Service{store}
 }
 
-func (s *Service) Book(b Booking) error {
+func (s *Service) Book(b Booking) (Session, error) {
 	return s.store.Book(b)
+}
+
+func (s *Service) ListBooking(movieID string) []Booking {
+	return s.store.ListBookings(movieID)
 }
