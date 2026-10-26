@@ -21,6 +21,17 @@ func (h *Handler) ListMovies(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, movies)
 }
 
+func (h *Handler) ConfirmSession(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.PathValue("sessionID")
+	booking, err := h.svc.store.ConfirmSession(sessionID)
+	if err != nil {
+		log.Println(err)
+	}
+
+	utils.WriteJSON(w, http.StatusCreated, booking)
+
+}
+
 func (h *Handler) HoldSeat(w http.ResponseWriter, r *http.Request) {
 	seatID := r.PathValue("seatID")
 	movieID := r.PathValue("movieID")

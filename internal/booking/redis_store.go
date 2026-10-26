@@ -3,10 +3,12 @@ package booking
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
+	goredis "github.com/chumaachike/cinema-booking-system/internal/adapters/redis"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
@@ -64,8 +66,38 @@ func (s *RedisStore) ListBookings(movieID string) []Booking {
 	}
 	return sessions
 }
+
+func (s *RedisStore) ConfirmSession(sessionID string) (Booking, error) {
+	ctx := context.Background()
+
+	result, err := goredis.ConfirmScript.Run(
+		ctx,
+		s.rdb,
+		[]string{sessionKey(sessionID)},
+		sessionID,
+	).Result()
+
+	if err != nil {
+		return Booking{}, fmt.Errorf("confirm session: %w", err)
+	}
+
+	data, ok := result.(string)
+	if !ok {
+		return Booking{}, errors.New("unexpected Redis response")
+	}
+
+	var booking Booking
+
+	if err := json.Unmarshal([]byte(data), &booking); err != nil {
+		return Booking{}, err
+	}
+
+	return booking, nil
+}
+
 func (s *RedisStore) hold(b Booking) (Session, error) {
 	b.ID = uuid.New().String()
+	b.Status = "held"
 	now := time.Now()
 	ctx := context.Background()
 	key := fmt.Sprintf("seat:%s:%s", b.MovieID, b.SeatID)
