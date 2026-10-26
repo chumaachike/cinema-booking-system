@@ -2,6 +2,7 @@ package booking
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -23,13 +24,42 @@ func (h *Handler) ListMovies(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ConfirmSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.PathValue("sessionID")
-	booking, err := h.svc.store.ConfirmSession(sessionID)
+	booking, err := h.svc.ConfirmSession(r.Context(), sessionID)
 	if err != nil {
-		log.Println(err)
+		panic(err)
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, booking)
 
+}
+
+func (h *Handler) ReleaseSession(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.PathValue("sessionID")
+
+	if sessionID == "" {
+		http.Error(w, "session ID is required", http.StatusBadRequest)
+		return
+	}
+
+	err := h.svc.ReleaseSession(r.Context(), sessionID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrSessionNotFound):
+			http.Error(w, "session not found", http.StatusNotFound)
+
+		case errors.Is(err, ErrInvalidSession):
+			http.Error(w, "invalid session", http.StatusForbidden)
+
+		case errors.Is(err, ErrBookingNotHeld):
+			http.Error(w, "booking is not held", http.StatusConflict)
+
+		default:
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) HoldSeat(w http.ResponseWriter, r *http.Request) {

@@ -8,6 +8,9 @@ import (
 var (
 	ErrSeatAlreadyBooked = errors.New("Serat is already taken")
 	ErrrUnableToMarshall = errors.New("Unable to Marshall struct")
+	ErrSessionNotFound   = errors.New("session not found")
+	ErrInvalidSession    = errors.New("invalid session")
+	ErrBookingNotHeld    = errors.New("booking not held")
 )
 
 // Booking represents a confirmed seat reservation.
@@ -27,6 +30,7 @@ type Session struct {
 type BookingStore interface {
 	Book(b Booking) (Session, error)
 	ConfirmSession(sessionID string) (Booking, error)
+	ReleaseSession(sessionID string) error
 	ListBookings(movieID string) []Booking
 }
 

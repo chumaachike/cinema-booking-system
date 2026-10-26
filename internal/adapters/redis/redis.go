@@ -46,3 +46,33 @@ redis.call("DEL", KEYS[1])
 
 return cjson.encode(booking)
 `)
+
+var ReleaseScript = goredis.NewScript(`
+    local seatKey = redis.call("GET", KEYS[1])
+
+    if not seatKey then
+        return 0
+    end
+
+    local data = redis.call("GET", seatKey)
+
+    if not data then
+        redis.call("DEL", KEYS[1])
+        return 0
+    end
+
+    local booking = cjson.decode(data)
+
+    if booking.ID ~= ARGV[1] then
+        return -1
+    end
+
+    if booking.Status ~= "held" then
+        return -2
+    end
+
+    redis.call("DEL", seatKey)
+    redis.call("DEL", KEYS[1])
+
+    return 1
+`)

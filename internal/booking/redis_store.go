@@ -142,3 +142,39 @@ func parseSession(val string) (Booking, error) {
 		Status:  data.Status,
 	}, nil
 }
+
+func (s *RedisStore) ReleaseSession(sessionID string) error {
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		3*time.Second,
+	)
+	defer cancel()
+
+	result, err := goredis.ReleaseScript.Run(
+		ctx,
+		s.rdb,
+		[]string{sessionKey(sessionID)},
+		sessionID,
+	).Int()
+
+	if err != nil {
+		return fmt.Errorf("release session: %w", err)
+	}
+
+	switch result {
+	case 1:
+		return nil
+
+	case 0:
+		return ErrSessionNotFound
+
+	case -1:
+		return ErrInvalidSession
+
+	case -2:
+		return ErrBookingNotHeld
+
+	default:
+		return fmt.Errorf("unexpected release result: %d", result)
+	}
+}
